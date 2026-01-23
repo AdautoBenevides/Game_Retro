@@ -40,7 +40,9 @@ public class UI {
                 null
             );
         }
-        for (int i = 0; i < Player.ammo; i++) {
+        
+        int ammoToRender = Math.min(Player.ammo, Player.maxammo);
+        for (int i = 0; i < ammoToRender; i++) {
             g.drawImage(
                 ammo,
                 x_ammo - i * spacing,

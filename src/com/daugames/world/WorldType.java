@@ -3,5 +3,6 @@ package com.daugames.world;
 public enum WorldType {
     WORLD,
     HOUSE, 
-    MAIN
+    MAIN,
+    CITY,
 }

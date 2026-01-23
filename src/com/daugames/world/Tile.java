@@ -13,8 +13,21 @@ public class Tile {
 
     // ===== MUNDO =====
     public static BufferedImage TILE_FLOOR = Game.spritesheet.getSprite(0, 0, 16, 16);
+    public static BufferedImage TILE_WAY = Game.spritesheet.getSprite(64, 80, 16, 16);
     public static BufferedImage TILE_WALL  = Game.spritesheet.getSprite(16, 0, 16, 16);
-
+    
+    // ===== ARVORE 1 ====
+    public static BufferedImage ARVORE_TL = Game.spritesheet.getSprite(96, 128, 16, 16);
+    public static BufferedImage ARVORE_TR = Game.spritesheet.getSprite(112, 128, 16, 16);
+    public static BufferedImage ARVORE_BL = Game.spritesheet.getSprite(96, 144, 16, 16);
+    public static BufferedImage ARVORE_BR =  Game.spritesheet.getSprite(112, 144, 16, 16);
+    
+    // ===== ARVORE 2 ====
+    public static BufferedImage ARVORE2_TL = Game.spritesheet.getSprite(128, 128, 16, 16);
+    public static BufferedImage ARVORE2_TR = Game.spritesheet.getSprite(144, 128, 16, 16);
+    public static BufferedImage ARVORE2_BL = Game.spritesheet.getSprite(128, 144, 16, 16);
+    public static BufferedImage ARVORE2_BR =  Game.spritesheet.getSprite(144, 144, 16, 16);
+    
     // ===== CASA =====
     public static BufferedImage TILE_FLOOR_HOUSE = Game.spritesheet.getSprite(0, 16, 16, 16);
     public static BufferedImage TILE_ENTRY = Game.spritesheet.getSprite(64, 64, 16, 16);

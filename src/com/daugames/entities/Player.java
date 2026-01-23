@@ -31,13 +31,17 @@ public class Player extends Entity {
     private BufferedImage[] leftPlayer;
     
     private BufferedImage playerDamage;
-    public static int ammo = 0;
+    public static int ammo = 5;
     public static int maxammo = 10;
     
     public boolean isDamaged = false;
     private int damageFrames = 0;
     
-    private Boolean hasGun = false;
+    private Boolean hasGun = true;
+    
+    public Boolean isShooting = false; 
+    
+  
 
     public Player(int x, int y, int w, int h, BufferedImage sprite) {
         super(x, y, w, h, sprite);
@@ -87,10 +91,13 @@ public class Player extends Entity {
                 index = (index + 1) % (maxIndex + 1);
             }
         }
-
+        
+        
+        //colisões
         checkCollisionLifePack();
         checkCollisionAmmo();
         checkCollisionGun();
+        
         if(isDamaged) {
         	damageFrames ++;
         	if(damageFrames == 20) {
@@ -99,7 +106,32 @@ public class Player extends Entity {
         	}
         }
         
-        Camera.x = Camera.clamp(getX() - Game.WIDTH / 2, 0, Math.max(0, World.WIDTH * World.TILE_SIZE - Game.WIDTH));
+        
+        if(isShooting) {
+        	
+        	//criar bala e atirar
+        	isShooting = false;
+        	if(hasGun && ammo >0 && Game.bullets.size()==0) {
+	        	ammo --;
+	        	int dx = 0;
+	        	int px = 0;
+	        	int py = 3;
+	        	
+	        	if(dir == 0) {
+	        		px = 11;
+	        		dx = 1;
+	        	}else {
+	        		px = 1;
+	        		dx = -1;
+	        	}
+	        	
+	        	BulletShoot bullet = new BulletShoot(this.getX() + px, this.getY() + py, 3, 3, null, dx, 0);
+	        	Game.bullets.add(bullet);
+        	}
+        }
+        
+		Camera.x = Camera.clamp(getX() - Game.WIDTH / 2, 0, Math.max(0, World.WIDTH * World.TILE_SIZE - Game.WIDTH));
+		
         Camera.y = Camera.clamp(getY() - Game.HEIGHT / 2, 0, Math.max(0, World.HEIGHT * World.TILE_SIZE - Game.HEIGHT));
     }
     
@@ -173,7 +205,7 @@ public class Player extends Entity {
             damageCooldown = DAMAGE_DELAY;
             System.out.println("PLAYER HIT! Vida atual: " + life);
             if (life <= 0) {
-                //restartGame();
+                restartGame();
             }
         }
     }

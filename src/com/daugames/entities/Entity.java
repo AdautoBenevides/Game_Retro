@@ -16,6 +16,9 @@ public class Entity {
     public static java.awt.image.BufferedImage BULLET_EN = Game.spritesheet.getSprite(6*16, 16, 16, 16);
     public static java.awt.image.BufferedImage WEAPON_RIGHT = Game.spritesheet.getSprite(112, 48, 16, 16);
     public static java.awt.image.BufferedImage WEAPON_LEFT = Game.spritesheet.getSprite(128, 48, 16, 16);
+    public static java.awt.image.BufferedImage ENEMY1_FEEDBACK = Game.spritesheet.getSprite(128, 64, 16, 16);
+    public static java.awt.image.BufferedImage ENEMY2_FEEDBACK_LEFT = Game.spritesheet.getSprite(96, 64, 16, 16);
+    public static java.awt.image.BufferedImage ENEMY2_FEEDBACK_RIGHT = Game.spritesheet.getSprite(112, 64, 16, 16);
     
     //INIMIGO 1
     public static BufferedImage[] ENEMY1_LEFT = {
@@ -27,7 +30,7 @@ public class Entity {
     public static BufferedImage[] ENEMY2_LEFT = {
     	    Game.spritesheet.getSprite(6*16, 32, 16, 16),
     	    Game.spritesheet.getSprite(7*16, 32, 16, 16)
-    	};
+    };
 
 	public static BufferedImage[] ENEMY2_RIGHT = {
 	    Game.spritesheet.getSprite(8*16, 32, 16, 16),

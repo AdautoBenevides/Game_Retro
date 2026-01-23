@@ -10,9 +10,11 @@ import com.daugames.world.World;
 
 public class Enemy extends Entity {
 
+    private EnemyType type;
+
     private double speed = 0.8;
 
-    // HITBOX (configurável por inimigo)
+    // HITBOX
     private int maskx = 4, masky = 4, maskw = 8, maskh = 8;
 
     // ANIMAÇÃO
@@ -27,37 +29,40 @@ public class Enemy extends Entity {
     private BufferedImage[] spritesRight;
     private BufferedImage[] currentSprites;
 
-    // -----------------------
-    // Construtor simples: recebe um único sprite (usado para spawn rápido)
-    // spritesLeft/right serão gerados com o mesmo sprite (2 frames iguais).
-    // -----------------------
-    public Enemy(int x, int y, int width, int height, BufferedImage sprite) {
+    private int life = 2;
+
+    // DANO
+    public boolean isDamaged = false;
+    private int damageFrames = 0;
+    private final int DAMAGE_TIME = 10;
+
+    // ===============================
+    // CONSTRUTOR SIMPLES
+    // ===============================
+    public Enemy(int x, int y, int width, int height, BufferedImage sprite, EnemyType type) {
         super(x, y, width, height, null);
 
-        // monta um "array" simples (2 frames identicos para não quebrar animação)
-        this.spritesLeft = new BufferedImage[] { sprite, sprite };
+        this.type = type;
+
+        this.spritesLeft  = new BufferedImage[] { sprite, sprite };
         this.spritesRight = this.spritesLeft;
         this.currentSprites = spritesLeft;
         this.maxIndex = spritesLeft.length - 1;
-
-        // hitbox padrão (ajustável)
-        this.maskx = 4;
-        this.masky = 4;
-        this.maskw = 8;
-        this.maskh = 8;
     }
 
-    // -----------------------
-    // Construtor completo: sprites left/right + hitbox personalizado
-    // -----------------------
+    // ===============================
+    // CONSTRUTOR COMPLETO
+    // ===============================
     public Enemy(int x, int y, int width, int height,
                  BufferedImage[] left,
                  BufferedImage[] right,
-                 int maskx, int masky, int maskw, int maskh) {
+                 int maskx, int masky, int maskw, int maskh,
+                 EnemyType type) {
+
         super(x, y, width, height, null);
 
         this.spritesLeft = left;
-        this.spritesRight = right != null ? right : left;
+        this.spritesRight = (right != null) ? right : left;
         this.currentSprites = spritesLeft;
         this.maxIndex = Math.max(spritesLeft.length, this.spritesRight.length) - 1;
 
@@ -65,15 +70,19 @@ public class Enemy extends Entity {
         this.masky = masky;
         this.maskw = maskw;
         this.maskh = maskh;
+
+        this.type = type;
     }
 
+    // ===============================
+    // UPDATE
+    // ===============================
     @Override
     public void update() {
 
         double dx = 0;
         double dy = 0;
 
-        // IA simples: com alguma aleatoriedade decide perseguição
         if (Game.rand.nextInt(100) < 30) {
 
             if (this.getX() < Game.player.getX() && World.isFree(this.getX() + (int)speed, this.getY())) {
@@ -94,77 +103,75 @@ public class Enemy extends Entity {
 
         boolean moved = (dx != 0 || dy != 0);
 
-        // movimento por eixo com checagem de colisão com outros inimigos
-        // X
-        if (dx != 0 &&
-            World.isFree((int)(x + dx), getY()) &&
-            !collidingWithEnemy((int)(x + dx), getY())) {
+        if (dx != 0 && World.isFree((int)(x + dx), getY()) && !collidingWithEnemy((int)(x + dx), getY())) {
             x += dx;
         }
 
-        // Y
-        if (dy != 0 &&
-            World.isFree(getX(), (int)(y + dy)) &&
-            !collidingWithEnemy(getX(), (int)(y + dy))) {
+        if (dy != 0 && World.isFree(getX(), (int)(y + dy)) && !collidingWithEnemy(getX(), (int)(y + dy))) {
             y += dy;
         }
 
-        // dano independente do movimento (se intersecta, causa dano ao player)
         if (getMask().intersects(Game.player.getMask())) {
             Game.player.takeDamage();
         }
 
-        // seleção dos sprites e animação por deslocamento
-        if (dx > 0) {
-            movingRight = true;
-        } else if (dx < 0) {
-            movingRight = false;
-        }
-
         currentSprites = movingRight ? spritesRight : spritesLeft;
-
 
         if (moved) {
             walkCounter += Math.abs(dx) + Math.abs(dy);
             if (walkCounter >= pixelsPerFrame) {
                 walkCounter = 0;
-                index++;
-                if (index > maxIndex) {
-					index = 0;
-				}
+                index = (index + 1) % (maxIndex + 1);
+            }
+        }
+
+        // controle do feedback de dano
+        if (isDamaged) {
+            damageFrames++;
+            if (damageFrames >= DAMAGE_TIME) {
+                damageFrames = 0;
+                isDamaged = false;
+            }
+        }
+
+        collidingBullet();
+
+        if (life <= 0) {
+            destroySelf();
+        }
+    }
+
+    // ===============================
+    // COLISÃO COM TIRO
+    // ===============================
+    public void collidingBullet() {
+        for (int i = 0; i < Game.bullets.size(); i++) {
+            Entity e = Game.bullets.get(i);
+
+            if (e instanceof BulletShoot) {
+                if (this.getMask().intersects(e.getBounds())) {
+                    life--;
+                    isDamaged = true;
+                    Game.bullets.remove(i);
+                    return;
+                }
             }
         }
     }
 
-    // movimento usado por versões alternativas (mantido)
-    private void move(double dx, double dy) {
-        // X
-        if (dx != 0 &&
-            World.isFree((int)(x + dx), getY()) &&
-            !collidingWithEnemy((int)(x + dx), getY()) &&
-            !getMask((int)(x + dx), getY()).intersects(Game.player.getMask())) {
-            x += dx;
-        }
-
-        // Y
-        if (dy != 0 &&
-            World.isFree(getX(), (int)(y + dy)) &&
-            !collidingWithEnemy(getX(), (int)(y + dy)) &&
-            !getMask(getX(), (int)(y + dy)).intersects(Game.player.getMask())) {
-            y += dy;
-        }
+    public void destroySelf() {
+        Game.entities.remove(this);
     }
 
+    // ===============================
+    // HITBOX
+    // ===============================
     public Rectangle getMask() {
-        return getMask(getX(), getY());
-    }
-
-    private Rectangle getMask(int px, int py) {
-        return new Rectangle(px + maskx, py + masky, maskw, maskh);
+        return new Rectangle(getX() + maskx, getY() + masky, maskw, maskh);
     }
 
     private boolean collidingWithEnemy(int nx, int ny) {
-        Rectangle nextMask = getMask(nx, ny);
+        Rectangle nextMask = new Rectangle(nx + maskx, ny + masky, maskw, maskh);
 
         for (Entity e : Game.entities) {
             if (e instanceof Enemy && e != this) {
@@ -176,15 +183,33 @@ public class Enemy extends Entity {
         return false;
     }
 
+    // ===============================
+    // RENDER
+    // ===============================
     @Override
     public void render(Graphics g) {
-        // garante índice válido
-        int idx = Math.max(0, Math.min(index, currentSprites.length - 1));
-        g.drawImage(currentSprites[idx], getX() - Camera.x, getY() - Camera.y, null);
 
-//        // DEBUG hitbox
-//        Rectangle r = getMask();
-//        g.drawRect(r.x - Camera.x, r.y - Camera.y, r.width, r.height);
+        if (!isDamaged) {
+
+            int idx = Math.max(0, Math.min(index, currentSprites.length - 1));
+            g.drawImage(currentSprites[idx], getX() - Camera.x, getY() - Camera.y, null);
+
+        } else {
+
+            BufferedImage feedback = null;
+
+            if (type == EnemyType.ENEMY1) {
+                feedback = movingRight
+                        ? Entity.ENEMY1_FEEDBACK
+                        : Entity.ENEMY1_FEEDBACK;
+
+            } else if (type == EnemyType.ENEMY2) {
+                feedback = movingRight
+                        ? Entity.ENEMY2_FEEDBACK_RIGHT
+                        : Entity.ENEMY2_FEEDBACK_LEFT;
+            }
+
+            g.drawImage(feedback, getX() - Camera.x, getY() - Camera.y, null);
+        }
     }
-
 }

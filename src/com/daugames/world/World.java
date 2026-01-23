@@ -11,6 +11,7 @@ import javax.imageio.ImageIO;
 
 import com.daugames.entities.Bullet;
 import com.daugames.entities.Enemy;
+import com.daugames.entities.EnemyType;
 import com.daugames.entities.Entity;
 import com.daugames.entities.LifePack;
 import com.daugames.entities.Weapon;
@@ -30,7 +31,7 @@ public class World {
     public static List<MesaTile> mesas;
     public static List<EscrivaninhaTile> escrivaninhas;
     public static List<BedTile> camas;
-
+    public static List<ArvoreTile> arvores;
     public static List<Rectangle> doors;
 
     private WorldType type;
@@ -49,6 +50,7 @@ public class World {
             camas = new ArrayList<>();
             doors = new ArrayList<>();
             houses = new ArrayList<>();
+            arvores = new ArrayList<>();
 
             int[] pixels = new int[WIDTH * HEIGHT];
             map.getRGB(0, 0, WIDTH, HEIGHT, pixels, 0, WIDTH);
@@ -117,8 +119,23 @@ public class World {
                             tiles[pos] = new WallTile(wx, wy, Tile.TILE_WALL);
                         } else if (pixel == 0xFF000000) {
                             tiles[pos] = new FloorTile(wx, wy, Tile.TILE_FLOOR);
+                        } else if (pixel == 0xFFFB9C38) {
+                            tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY);
                         }
+                        // arvores 
+                        
+                        if (pixel == 0xFF006605) {
+                        	 tiles[pos] = new FloorTile(wx, wy, Tile.TILE_FLOOR);
 
+                        	    // adiciona a árvore como objeto
+                    	    arvores.add(new ArvoreTile(wx, wy, 1));
+                        }else if (pixel == 0xFF003F02) {
+                       	 	tiles[pos] = new FloorTile(wx, wy, Tile.TILE_FLOOR);
+
+                 	    // adiciona a árvore como objeto
+                       	 	arvores.add(new ArvoreTile(wx, wy, 2));
+                        }
+                        
                         // itens
                         if (pixel == 0xFFFFB27F) {
                             Game.entities.add(new LifePack(wx, wy, 16, 16, Entity.LIFEPACK_EN));
@@ -139,7 +156,8 @@ public class World {
                         		        16,
                         		        Entity.ENEMY1_LEFT,
                         		        null,
-                        		        4, 4, 8, 8
+                        		        4, 4, 8, 8, 
+                        		        EnemyType.ENEMY1
                         		    )
                         		);
 
@@ -155,7 +173,8 @@ public class World {
                         		        16,
                         		        Entity.ENEMY2_LEFT,
                         		        Entity.ENEMY2_RIGHT,
-                        		        4, 4, 8, 8
+                        		        4, 4, 8, 8,
+                        		        EnemyType.ENEMY2
                         		    )
                         		);
                         }
@@ -236,6 +255,12 @@ public class World {
                 return false;
             }
         }
+        
+        for (ArvoreTile arvore : arvores) {
+            if (arvore.getBounds().intersects(xnext, ynext, TILE_SIZE, TILE_SIZE)) {
+                return false;
+            }
+        }
 
         return true;
     }
@@ -271,6 +296,9 @@ public class World {
 
         for (House h : houses) {
 			h.render(g);
+		}
+        for (ArvoreTile a : arvores) {
+			a.render(g);
 		}
     }
 

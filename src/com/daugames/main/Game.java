@@ -14,11 +14,13 @@ import java.util.Random;
 
 import javax.swing.JFrame;
 
+import com.daugames.entities.BulletShoot;
 import com.daugames.entities.Enemy;
 import com.daugames.entities.Entity;
 import com.daugames.entities.Player;
 import com.daugames.graficos.Spritesheet;
 import com.daugames.graficos.UI;
+import com.daugames.world.Camera;
 import com.daugames.world.World;
 import com.daugames.world.WorldType;
 
@@ -36,7 +38,8 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
     public static List<Entity> entities;
     public static Spritesheet spritesheet;
-
+    public static List<BulletShoot> bullets;
+    
     public static World world;
 
     public static Player player;
@@ -63,13 +66,15 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
         ui = new UI(); // UI normalmente usa imagens do spritesheet (se usar)
         entities = new ArrayList<Entity>();
-
+        bullets = new ArrayList<BulletShoot>();
+        
         // Player criado e adicionado
         player = new Player(0, 0, 16, 16, spritesheet.getSprite(32, 0, 16, 16));
         entities.add(player);
 
         // inicia no mapa principal para você ver inimigos por padrão
         world = new World("/map_house.png", WorldType.HOUSE);
+        
     }
 
     public synchronized void start() {
@@ -106,6 +111,13 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public void exitHouse() {
         changeWorld("/map.png", WorldType.MAIN);
     }
+    
+    public void enterCity() {
+    	world = new World("/map_city.png", WorldType.CITY);
+    	Camera.x = 0;
+    	Camera.y = 0;
+
+    }
 
 
     public static void main(String args[]) {
@@ -119,11 +131,24 @@ public class Game extends Canvas implements Runnable, KeyListener {
 		}
 
         if (doorCooldown == 0 && World.playerOnDoor()) {
-            if (world != null && world.getType() == WorldType.MAIN) {
-                enterHouse(); 
-            } else { 
-                exitHouse();
-            } 
+    	  if (world != null) {
+
+    	        if (world.getType() == WorldType.MAIN) {
+
+    	            // MAIN → HOUSE
+    	            enterHouse();
+
+    	        } else if (world.getType() == WorldType.HOUSE) {
+
+    	            // HOUSE → CITY
+    	            enterCity();
+
+    	        } else if (world.getType() == WorldType.CITY) {
+
+    	            // CITY → HOUSE (ou MAIN, você decide)
+    	            enterHouse(); // ou enterMain()
+    	        }
+    	    }
             doorCooldown = DOOR_COOLDOWN_FRAMES; 
         }
 
@@ -131,6 +156,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
             Entity e = entities.get(i);
             e.update();
         } 
+        
+        for(int i = 0; i<bullets.size(); i++ ) {
+        	bullets.get(i).update();
+        }
     } 
 
     public void render() {
@@ -148,6 +177,12 @@ public class Game extends Canvas implements Runnable, KeyListener {
             Entity e = entities.get(i);
             e.render(g);
         }
+        
+        //renderizando as balas
+        for(int i = 0; i<bullets.size(); i++ ) {
+        	bullets.get(i).render(g);
+        }
+        
         ui.render(g);
 
         g.dispose();
@@ -221,6 +256,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
             player.up = true;
         } else if (e.getKeyCode() == KeyEvent.VK_DOWN || e.getKeyCode() == KeyEvent.VK_S) {
             player.down = true;
+        }
+        
+        if(e.getKeyCode() == KeyEvent.VK_SPACE) {
+        	player.isShooting = true;
         }
     }
 
