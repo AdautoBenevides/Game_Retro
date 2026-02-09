@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 
 import com.daugames.main.Game;
 import com.daugames.world.Camera;
+import com.daugames.world.GameState;
 import com.daugames.world.World;
 import com.daugames.world.WorldType;
 
@@ -18,7 +19,7 @@ public class Player extends Entity {
     // VIDA
     public static int life = 5, maxlife = 5;
     private int damageCooldown = 0;
-    private final int DAMAGE_DELAY = 60; // frames (~1s)
+    private final int DAMAGE_DELAY = 60;
 
     // HITBOX
     private int maskx = 4, masky = 8, maskw = 8, maskh = 8;
@@ -27,44 +28,59 @@ public class Player extends Entity {
     private int frames = 0, maxFrames = 5, index = 0, maxIndex = 3;
     private boolean moved = false;
 
-    private BufferedImage[] rightPlayer;
-    private BufferedImage[] leftPlayer;
-    
-    private BufferedImage playerDamage;
+    private BufferedImage[] rightSprites;
+    private BufferedImage[] leftSprites;
+    private BufferedImage playerDamage_girl;
+    private BufferedImage playerDamage_boy;
+
     public static int ammo = 5;
     public static int maxammo = 10;
-    
+
     public boolean isDamaged = false;
     private int damageFrames = 0;
-    
-    private Boolean hasGun = true;
-    
-    public Boolean isShooting = false; 
-    
-  
 
-    public Player(int x, int y, int w, int h, BufferedImage sprite) {
-        super(x, y, w, h, sprite);
+    private boolean hasGun = false;
+    public boolean isShooting = false;
+    
+    // ✅ CONSTRUTOR ÚNICO CORRETO
+    public Player(int x, int y, int w, int h) {
+        super(x, y, w, h, null);
+        loadCharacterSprites();
+        playerDamage_girl = Game.spritesheet.getSprite(96, 48, 16, 16);
+        playerDamage_boy = Game.spritesheet.getSprite(112, 96, 16, 16);
+    }
 
-        rightPlayer = new BufferedImage[4];
-        leftPlayer  = new BufferedImage[4];
-        playerDamage = Game.spritesheet.getSprite(96, 48, 16, 16);
+    // ✅ CARREGA SPRITES BASEADO NO PERSONAGEM ESCOLHIDO
+    private void loadCharacterSprites() {
+        int startYRight;
+        int startYLeft;
+
+        if (Game.selectedCharacter == CharacterType.BOY) {
+            startYRight = 0;
+            startYLeft  = 16;
+        } else {
+            startYRight = 32;
+            startYLeft  = 48;
+        }
+
+        rightSprites = new BufferedImage[4];
+        leftSprites  = new BufferedImage[4];
+
         for (int i = 0; i < 4; i++) {
-            rightPlayer[i] = Game.spritesheet.getSprite(32 + i*16, 32, 16, 16);
-            leftPlayer[i]  = Game.spritesheet.getSprite(32 + i*16, 48, 16, 16);
+            rightSprites[i] = Game.spritesheet.getSprite(32 + i * 16, startYRight, 16, 16);
+            leftSprites[i]  = Game.spritesheet.getSprite(32 + i * 16, startYLeft, 16, 16);
         }
     }
 
     @Override
     public void update() {
-
         if (damageCooldown > 0) {
             damageCooldown--;
         }
 
         moved = false;
 
-        // X
+        // CORREÇÃO: Chama canMove com coordenadas do SPRITE
         if (right && canMove((int)(x + speed), getY())) {
             x += speed;
             dir = 0;
@@ -75,7 +91,6 @@ public class Player extends Entity {
             moved = true;
         }
 
-        // Y
         if (up && canMove(getX(), (int)(y - speed))) {
             y -= speed;
             moved = true;
@@ -91,103 +106,51 @@ public class Player extends Entity {
                 index = (index + 1) % (maxIndex + 1);
             }
         }
-        
-        
-        //colisões
-        checkCollisionLifePack();
-        checkCollisionAmmo();
-        checkCollisionGun();
-        
-        if(isDamaged) {
-        	damageFrames ++;
-        	if(damageFrames == 20) {
-        		damageFrames = 0;
-        		isDamaged = false;
-        	}
-        }
-        
-        
-        if(isShooting) {
-        	
-        	//criar bala e atirar
-        	isShooting = false;
-        	if(hasGun && ammo >0 && Game.bullets.size()==0) {
-	        	ammo --;
-	        	int dx = 0;
-	        	int px = 0;
-	        	int py = 3;
-	        	
-	        	if(dir == 0) {
-	        		px = 11;
-	        		dx = 1;
-	        	}else {
-	        		px = 1;
-	        		dx = -1;
-	        	}
-	        	
-	        	BulletShoot bullet = new BulletShoot(this.getX() + px, this.getY() + py, 3, 3, null, dx, 0);
-	        	Game.bullets.add(bullet);
-        	}
-        }
-        
-		Camera.x = Camera.clamp(getX() - Game.WIDTH / 2, 0, Math.max(0, World.WIDTH * World.TILE_SIZE - Game.WIDTH));
-		
-        Camera.y = Camera.clamp(getY() - Game.HEIGHT / 2, 0, Math.max(0, World.HEIGHT * World.TILE_SIZE - Game.HEIGHT));
-    }
-    
-    public void checkCollisionAmmo() {
-    	for(int i = 0; i < Game.entities.size(); i++) {
-    		Entity atual = Game.entities.get(i);
-    		if (atual instanceof Bullet) {
-    			if (this.getMask().intersects(atual.getBounds())) {
-    				ammo++;
-    				if (ammo > maxammo) {
-                        ammo = maxammo;
-                    }
-    				Game.entities.remove(atual);
-    				return;
-    			}
-    		}
-    	}
-    }
-    public void checkCollisionLifePack() {
-    	for(int i = 0; i < Game.entities.size(); i++) {
-    		Entity atual = Game.entities.get(i);
-    		if (atual instanceof LifePack) {
-    			if (this.getMask().intersects(atual.getBounds())) {
-    				life = Math.min(life + 1, maxlife);
-    				Game.entities.remove(atual);
-    				return;
-    			}
-    		}
-    	}
-    }
-    public void checkCollisionGun() {
-    	for(int i = 0; i < Game.entities.size(); i++) {
-    		Entity atual = Game.entities.get(i);
-    		if (atual instanceof Weapon) {
-    			if (this.getMask().intersects(atual.getBounds())) {
-    				hasGun = true;
-    				Game.entities.remove(atual);
-    				return;
-    			}
-    		}
-    	}
-    }
-    private boolean canMove(int nx, int ny) {
-        Rectangle nextMask = new Rectangle(nx + maskx, ny + masky, maskw, maskh);
 
-        // Mapa
-        if (!World.isFree(nx, ny)) {
+        if (isDamaged) {
+            damageFrames++;
+            if (damageFrames == 20) {
+                damageFrames = 0;
+                isDamaged = false;
+            }
+        }
+
+        if (isShooting) {
+            isShooting = false;
+            if (hasGun && ammo > 0 && Game.bullets.size() == 0) {
+                ammo--;
+                int dx = (dir == 0) ? 1 : -1;
+                int px = (dir == 0) ? 11 : 1;
+                int py = 3;
+
+                BulletShoot bullet = new BulletShoot(
+                        this.getX() + px,
+                        this.getY() + py,
+                        3, 3, null, dx, 0);
+
+                Game.bullets.add(bullet);
+            }
+        }
+
+        Camera.x = Camera.clamp(getX() - Game.WIDTH / 2, 0,
+                Math.max(0, World.WIDTH * World.TILE_SIZE - Game.WIDTH));
+        Camera.y = Camera.clamp(getY() - Game.HEIGHT / 2, 0,
+                Math.max(0, World.HEIGHT * World.TILE_SIZE - Game.HEIGHT));
+    }
+
+    // CORREÇÃO: Método canMove simplificado
+    private boolean canMove(int nx, int ny) {
+        // nx e ny são coordenadas do SPRITE
+        
+        // 1. Verifica colisão com tiles do mundo (usa dimensões do SPRITE)
+        if (!World.isFree(nx, ny, width, height)) {
             return false;
         }
-
-        // Inimigos: evita atravessar. Se estiver em cooldown de dano, allow walking through (opcional)
+        
+        // 2. Verifica colisão com inimigos (usa máscara para maior precisão)
+        Rectangle nextMask = new Rectangle(nx + maskx, ny + masky, maskw, maskh);
         for (Entity e : Game.entities) {
             if (e instanceof Enemy) {
-                if (damageCooldown > 0) {
-					continue; // se estiver invulnerável, não bloqueia
-				}
                 Enemy enemy = (Enemy) e;
                 if (nextMask.intersects(enemy.getMask())) {
                     return false;
@@ -197,58 +160,54 @@ public class Player extends Entity {
         return true;
     }
 
-    // chamável por Enemy quando intersecta
     public void takeDamage() {
         if (damageCooldown == 0) {
             life--;
             isDamaged = true;
             damageCooldown = DAMAGE_DELAY;
-            System.out.println("PLAYER HIT! Vida atual: " + life);
+
             if (life <= 0) {
-                restartGame();
+                Game.state = GameState.GAME_OVER;
             }
         }
-    }
-    
-    // RESETA O GAME
-    public static void restartGame() {
-
-        // limpa entidades
-        Game.entities.clear();
-
-        // recria player
-        Game.player = new Player(0, 0, 16, 16,
-                Game.spritesheet.getSprite(32, 0, 16, 16));
-
-        Player.life = Player.maxlife;
-
-        Game.entities.add(Game.player);
-
-        // recria mundo inicial
-        Game.world = new World("/map_house.png", WorldType.HOUSE);
     }
 
     public Rectangle getMask() {
         return new Rectangle(getX() + maskx, getY() + masky, maskw, maskh);
     }
 
-    
     @Override
     public void render(Graphics g) {
-        
         if (!isDamaged) {
-        	BufferedImage img = (dir == 0 ? rightPlayer[index] : leftPlayer[index]);
+            BufferedImage img = (dir == 0 ? rightSprites[index] : leftSprites[index]);
             g.drawImage(img, getX() - Camera.x, getY() - Camera.y, null);
-            if(hasGun && dir == 0) {
-            	g.drawImage(Entity.WEAPON_RIGHT, this.getX() + 2 - Camera.x, this.getY() +2 - Camera.y, null);
-            }else if(hasGun && dir == 1) {
-            	g.drawImage(Entity.WEAPON_LEFT, this.getX()-2 - Camera.x, this.getY() + 2 - Camera.y, null);
+
+            if (hasGun) {
+                if (dir == 0) {
+                    g.drawImage(Entity.WEAPON_RIGHT,
+                            this.getX() + 2 - Camera.x,
+                            this.getY() + 2 - Camera.y, null);
+                } else {
+                    g.drawImage(Entity.WEAPON_LEFT,
+                            this.getX() - 2 - Camera.x,
+                            this.getY() + 2 - Camera.y, null);
+                }
             }
-        }else {
-        	g.drawImage(playerDamage, getX() - Camera.x, getY() - Camera.y, null);
+        } else {
+            if (Game.selectedCharacter == CharacterType.BOY) {
+                g.drawImage(playerDamage_boy, getX() - Camera.x, getY() - Camera.y, null);
+            } else if(Game.selectedCharacter == CharacterType.GIRL) {
+                g.drawImage(playerDamage_girl, getX() - Camera.x, getY() - Camera.y, null);
+            }
         }
-//        // DEBUG HITBOX
-//        Rectangle r = getMask();
-//        g.drawRect(r.x - Camera.x, r.y - Camera.y, r.width, r.height);
+    }
+
+    // ✅ RESET CORRETO USANDO PERSONAGEM ESCOLHIDO
+    public static void restartGame() {
+        Game.entities.clear();
+        Game.player = new Player(0, 0, 16, 16);
+        life = maxlife;
+        Game.entities.add(Game.player);
+        Game.world = new World("/map_house.png", WorldType.HOUSE);
     }
 }

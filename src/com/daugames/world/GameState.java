@@ -1,6 +1,7 @@
 package com.daugames.world;
 
 public enum GameState {
-    WORLD,
-    HOUSE
+    GAME_OVER, 
+    IN_GAME,
+    MENU
 }

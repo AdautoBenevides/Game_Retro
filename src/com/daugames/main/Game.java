@@ -4,23 +4,30 @@ import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
 import com.daugames.entities.BulletShoot;
+import com.daugames.entities.CharacterType;
 import com.daugames.entities.Enemy;
 import com.daugames.entities.Entity;
 import com.daugames.entities.Player;
 import com.daugames.graficos.Spritesheet;
 import com.daugames.graficos.UI;
 import com.daugames.world.Camera;
+import com.daugames.world.GameState;
+import com.daugames.world.House;
 import com.daugames.world.World;
 import com.daugames.world.WorldType;
 
@@ -30,7 +37,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public static JFrame frame;
     public static final int WIDTH = 240;
     public static final int HEIGHT = 160;
-    private final int SCALE = 4;
+    public static final int SCALE = 4;
     private Thread thread;
     private boolean isRuning = true;
 
@@ -49,12 +56,25 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	public static Enemy enemies;
 
     public UI ui;
+    
+    public static GameState state = GameState.IN_GAME;
+    
+    private BufferedImage go_girl;
+    private BufferedImage go_boy;
+    
+    private boolean restartGame = false;
+    
+    public Menu menu;
+    
+    public static CharacterType selectedCharacter;
 
     // cooldown para evitar spam de entrada/saida
     private int doorCooldown = 0;
     private final int DOOR_COOLDOWN_FRAMES = 20;
 
     public Game() {
+    	Sound.MUSIC_BG.loop();
+    	Sound.MUSIC_BG.setVolume(-30.0f);
         rand = new Random();
         addKeyListener(this);
         setPreferredSize(new Dimension(WIDTH * SCALE, HEIGHT * SCALE));
@@ -68,12 +88,29 @@ public class Game extends Canvas implements Runnable, KeyListener {
         entities = new ArrayList<Entity>();
         bullets = new ArrayList<BulletShoot>();
         
-        // Player criado e adicionado
-        player = new Player(0, 0, 16, 16, spritesheet.getSprite(32, 0, 16, 16));
+        
+        // Define um personagem padrão só para iniciar o jogo
+        selectedCharacter = CharacterType.BOY;
+
+        // Player criado SEM sprite (ele decide sozinho)
+        player = new Player(0, 0, 16, 16);
         entities.add(player);
 
-        // inicia no mapa principal para você ver inimigos por padrão
+        // inicia no mapa
         world = new World("/map_house.png", WorldType.HOUSE);
+
+        menu = new Menu();
+
+
+        
+        //carrega a imagem de game over
+        try {
+			go_girl = ImageIO.read(getClass().getResource("/game_over_girl.png"));
+			go_boy = ImageIO.read(getClass().getResource("/game_over_boy.png"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         
     }
 
@@ -113,10 +150,16 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
     
     public void enterCity() {
-    	world = new World("/map_city.png", WorldType.CITY);
+    	changeWorld("/map_city.png", WorldType.CITY);
     	Camera.x = 0;
     	Camera.y = 0;
 
+    }
+    
+    private void enterMain() {
+        world = new World("/map.png", WorldType.MAIN);
+        player.setX(100);
+        player.setY(100);
     }
 
 
@@ -126,40 +169,47 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
     
     public void update() {
-        if (doorCooldown > 0) {
-			doorCooldown--;
-		}
+    	if (state == GameState.IN_GAME) {
+			if (doorCooldown > 0) {
+				doorCooldown--;
+			}
+		
 
-        if (doorCooldown == 0 && World.playerOnDoor()) {
-    	  if (world != null) {
+	        if (doorCooldown == 0 && World.playerOnDoor()) {
+	    	  if (world != null) {
+	
+	    		  if (World.playerOnDoor()) {
 
-    	        if (world.getType() == WorldType.MAIN) {
+	    			    if (world.getType() == WorldType.HOUSE) {
 
-    	            // MAIN → HOUSE
-    	            enterHouse();
+	    			        enterCity();      // HOUSE → CITY
 
-    	        } else if (world.getType() == WorldType.HOUSE) {
+	    			    } else if (world.getType() == WorldType.CITY) {
 
-    	            // HOUSE → CITY
-    	            enterCity();
+	    			        enterMain();      // CITY → MAIN
 
-    	        } else if (world.getType() == WorldType.CITY) {
+	    			    } else if (world.getType() == WorldType.MAIN) {
 
-    	            // CITY → HOUSE (ou MAIN, você decide)
-    	            enterHouse(); // ou enterMain()
-    	        }
-    	    }
-            doorCooldown = DOOR_COOLDOWN_FRAMES; 
-        }
+	    			        enterCity();      // MAIN → CITY
+	    			    }
+	    			}
 
-        for (int i = 0; i < entities.size(); i++) { 
-            Entity e = entities.get(i);
-            e.update();
-        } 
-        
-        for(int i = 0; i<bullets.size(); i++ ) {
-        	bullets.get(i).update();
-        }
+
+	    	    }
+	            doorCooldown = DOOR_COOLDOWN_FRAMES; 
+	        }
+	
+	        for (int i = 0; i < entities.size(); i++) { 
+	            Entity e = entities.get(i);
+	            e.update();
+	        } 
+	        
+	        for(int i = 0; i<bullets.size(); i++ ) {
+	        	bullets.get(i).update();
+	        }
+    	}else if(state == GameState.MENU) {
+    		menu.update();
+    	}
     } 
 
     public void render() {
@@ -168,28 +218,65 @@ public class Game extends Canvas implements Runnable, KeyListener {
             this.createBufferStrategy(3);
             return;
         }
+
+        // ===== desenha no buffer interno =====
         Graphics g = image.getGraphics();
-        g.setColor(new Color(0, 0, 0));
+        g.setColor(Color.BLACK);
         g.fillRect(0, 0, WIDTH, HEIGHT);
 
-        world.render(g);
-        for (int i = 0; i < entities.size(); i++) {
-            Entity e = entities.get(i);
-            e.render(g);
+        if (state == GameState.IN_GAME) {
+
+            world.render(g);
+
+            for (Entity e : entities) {
+                e.render(g);
+            }
+
+            for (BulletShoot b : bullets) {
+                b.render(g);
+            }
+
+            ui.render(g);
+
         }
-        
-        //renderizando as balas
-        for(int i = 0; i<bullets.size(); i++ ) {
-        	bullets.get(i).render(g);
-        }
-        
-        ui.render(g);
 
         g.dispose();
+
+        // ===== desenha na tela (com escala) =====
         g = bs.getDrawGraphics();
         g.drawImage(image, 0, 0, WIDTH * SCALE, HEIGHT * SCALE, null);
+
+        // ===== GAME OVER por cima =====
+        if (state == GameState.GAME_OVER) {
+            Graphics2D g2 = (Graphics2D) g;
+            int goWidth = 	WIDTH * SCALE;
+            int goHeigth = HEIGHT *SCALE;
+
+            if(selectedCharacter == CharacterType.GIRL) {
+				g2.drawImage(
+				    go_girl,0, 0,
+				    goWidth,
+				    goHeigth,
+				    null
+				);
+			}else if(selectedCharacter == CharacterType.BOY) {
+				g2.drawImage(go_boy, 0, 0, goWidth, goHeigth,null);
+			}
+            
+            if(restartGame) {
+            	this.restartGame = false;
+            	state = GameState.IN_GAME;
+            	Player.restartGame();
+            }
+        } else if(state == GameState.MENU) {
+        	menu.render(g);
+        	
+        }
+
+        g.dispose();
         bs.show();
     }
+
     public void changeWorld(String path, WorldType type) {
 
         // remove tudo EXCETO o player
@@ -197,7 +284,32 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
         // cria novo mundo (ele vai spawnar inimigos do mapa)
         world = new World(path, type);
+
+        // --- posiciona o player em uma "porta" do novo mapa, se houver ---
+        // Preferência: portas maptiles (World.doors). Se não tiver, tenta portas das casas.
+        if (World.doors != null && !World.doors.isEmpty()) {
+            Rectangle d = World.doors.get(0); // por enquanto usa a primeira porta do mapa
+            player.setX(d.x);
+            player.setY(d.y);
+            // centraliza câmera aproximadamente no player
+            Camera.x = Math.max(0, d.x - (WIDTH / 2));
+            Camera.y = Math.max(0, d.y - (HEIGHT / 2));
+        } else if (World.houses != null && !World.houses.isEmpty()) {
+            House h = World.houses.get(0); // fallback: primeira house encontrada
+            Rectangle da = h.getDoorArea();
+            if (da != null) {
+                player.setX(da.x);
+                player.setY(da.y);
+                Camera.x = Math.max(0, da.x - (WIDTH / 2));
+                Camera.y = Math.max(0, da.y - (HEIGHT / 2));
+            }
+        } else {
+            // fallback genérico: mantém player onde o World anterior deixou (ou 0,0)
+            Camera.x = Math.max(0, player.getX() - (WIDTH / 2));
+            Camera.y = Math.max(0, player.getY() - (HEIGHT / 2));
+        }
     }
+
 
 
     @Override
@@ -221,7 +333,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
             }
 
             if (System.currentTimeMillis() - timer >= 1000) {
-                System.out.println("FPS:" + frames);
+//                System.out.println("FPS:" + frames);
                 frames = 0;
                 timer += 1000;
             }
@@ -267,14 +379,49 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_RIGHT || e.getKeyCode() == KeyEvent.VK_D) {
             player.right = false;
+            if (state == GameState.MENU){
+            	menu.right = true;
+            }
         } else if (e.getKeyCode() == KeyEvent.VK_LEFT || e.getKeyCode() == KeyEvent.VK_A) {
             player.left = false;
+            if (state == GameState.MENU){
+            	menu.left = true;
+            }
         }
 
         if (e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_W) {
             player.up = false;
+            
+            if(state == GameState.MENU) {
+            	menu.up = true;
+            }
         } else if (e.getKeyCode() == KeyEvent.VK_DOWN || e.getKeyCode() == KeyEvent.VK_S) {
             player.down = false;
+            
+            if(state == GameState.MENU) {
+            	menu.down = true;
+            }
+        }
+        
+        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+        	
+        	if(state == GameState.GAME_OVER) {        		
+        		restartGame = true;
+        	}
+        	
+        	if(state == GameState.MENU) {
+        		menu.enter = true;
+        	}
+        	
+        }
+        
+        if(e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+        	state = GameState.MENU;
+        	menu.pause = true;
+        }
+        
+        if (e.getKeyCode() == KeyEvent.VK_F1) {
+            House.showCollisionDebug = !House.showCollisionDebug;
         }
     }
 }

@@ -8,14 +8,22 @@ import com.daugames.main.Game;
 
 public class Tile {
 
-    // ===== TAMANHO PADRÃO =====
+    // ===== TAMANHO PADRÃO ====
     public static final int TILE_SIZE = 16;
 
     // ===== MUNDO =====
     public static BufferedImage TILE_FLOOR = Game.spritesheet.getSprite(0, 0, 16, 16);
     public static BufferedImage TILE_WAY = Game.spritesheet.getSprite(64, 80, 16, 16);
+    public static BufferedImage TILE_WAY_BO_TO = Game.spritesheet.getSprite(80, 96, 16, 16);
+    public static BufferedImage TILE_WAY_PREENCHED = Game.spritesheet.getSprite(96, 96, 16, 16);
+    public static BufferedImage TILE_WAY_BOTTOM = Game.spritesheet.getSprite(112, 80, 16, 16);
+    public static BufferedImage TILE_WAY_TOP = Game.spritesheet.getSprite(96, 80, 16, 16);
+    public static BufferedImage TILE_WAY_RIGHT = Game.spritesheet.getSprite(80, 80, 16, 16);
+    public static BufferedImage TILE_WAY_TOP_RIGHT = Game.spritesheet.getSprite(144, 96, 16, 16);
+    public static BufferedImage TILE_WAY_UNDER_LEFT = Game.spritesheet.getSprite(128, 80, 16, 16);
+    public static BufferedImage TILE_WAY_UNDER_RIGHT = Game.spritesheet.getSprite(144, 80, 16, 16);
     public static BufferedImage TILE_WALL  = Game.spritesheet.getSprite(16, 0, 16, 16);
-    
+    public static BufferedImage TILE_FLOOR_GRASS = Game.spritesheet.getSprite(160, 0, 16, 16);
     // ===== ARVORE 1 ====
     public static BufferedImage ARVORE_TL = Game.spritesheet.getSprite(96, 128, 16, 16);
     public static BufferedImage ARVORE_TR = Game.spritesheet.getSprite(112, 128, 16, 16);
@@ -34,6 +42,7 @@ public class Tile {
     public static BufferedImage TILE_CARPET = Game.spritesheet.getSprite(80, 64, 16, 16);
     public static BufferedImage TILE_CHEST = Game.spritesheet.getSprite(16, 16, 16, 16);
     public static BufferedImage PICTURE = Game.spritesheet.getSprite(48, 80, 16, 16);
+    public static BufferedImage CLOCK = Game.spritesheet.getSprite(144, 64, 16, 16);
 
     // ===== MESA =====
     public static BufferedImage MESA_TL = Game.spritesheet.getSprite(0, 32, 16, 16);
@@ -69,6 +78,32 @@ public class Tile {
     public static BufferedImage BED_BL = Game.spritesheet.getSprite(0, 144, 16, 16);
     public static BufferedImage BED_BR = Game.spritesheet.getSprite(16, 144, 16, 16);
     
+    // ==== LAGO =====
+    public static BufferedImage LAKE_TL = Game.spritesheet.getSprite(32, 96, 16, 16);
+    public static BufferedImage LAKE_TOP = Game.spritesheet.getSprite(48, 96, 16, 16);
+    public static BufferedImage LAKE_TR = Game.spritesheet.getSprite(64, 96, 16, 16);
+    public static BufferedImage LAKE_LEFT = Game.spritesheet.getSprite(32, 106, 16, 16);
+    public static BufferedImage LAKE_RIGHT = Game.spritesheet.getSprite(64, 106, 16, 16);
+    public static BufferedImage LAKE_BOTTOM = Game.spritesheet.getSprite(48, 112, 16, 16);
+    public static BufferedImage LAKE_BL = Game.spritesheet.getSprite(32, 112, 16, 16);
+    public static BufferedImage LAKE_BR = Game.spritesheet.getSprite(64, 112, 16, 16);
+    public static BufferedImage LAKE_WATER = Game.spritesheet.getSprite(48, 105, 16, 16);
+    public static BufferedImage LAKE_PIER = Game.spritesheet.getSprite(80, 112, 16, 16);
+    public static BufferedImage LAKE_PIER2 = Game.spritesheet.getSprite(96, 112, 16, 16);
+    public static BufferedImage LAKE_PIER3 = Game.spritesheet.getSprite(32, 128, 16, 16);
+    public static BufferedImage LAKE_PIER4 = Game.spritesheet.getSprite(48, 128, 16, 16);
+    public static BufferedImage LAKE_DETAILS = Game.spritesheet.getSprite(64, 128, 16, 16);
+    public static BufferedImage LAKE_DETAILS2 = Game.spritesheet.getSprite(80, 128, 16, 16);
+    public static BufferedImage LAKE_DETAILS3 = Game.spritesheet.getSprite(32, 144, 16, 16);
+    // ==== CERCA =====
+    public static BufferedImage FENCE_MIDDLE_LEFT  = Game.spritesheet.getSprite(160, 32, 16, 16);
+    public static BufferedImage FENCE_TOP_LEFT  = Game.spritesheet.getSprite(160, 16, 16, 16);
+    public static BufferedImage FENCE_TOP_RIGHT  = Game.spritesheet.getSprite(176, 16, 16, 16);
+    public static BufferedImage FENCE_MIDDLE  = Game.spritesheet.getSprite(176,48, 16, 16);
+    public static BufferedImage FENCE_BOTTOM_LEFT = Game.spritesheet.getSprite(160, 48, 16, 16);
+    public static BufferedImage FENCE_BOTTOM_RIGHT  = Game.spritesheet.getSprite(192, 48, 16, 16);
+    public static BufferedImage FENCE_MIDDLE_RIGHT  = Game.spritesheet.getSprite(176, 32, 16, 16);
+    
     
     // ===== ATRIBUTOS =====
     protected BufferedImage sprite;
@@ -79,6 +114,12 @@ public class Tile {
         this.x = x;
         this.y = y;
         this.sprite = sprite;
+    }
+    public Tile(int x, int y, BufferedImage sprite, boolean solid) {
+        this.x = x;
+        this.y = y;
+        this.sprite = sprite;
+        this.solid = solid;
     }
 
     // ===== RENDER =====
