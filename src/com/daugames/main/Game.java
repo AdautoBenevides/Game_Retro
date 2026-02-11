@@ -31,6 +31,7 @@ import com.daugames.world.House;
 import com.daugames.world.World;
 import com.daugames.world.WorldType;
 
+
 public class Game extends Canvas implements Runnable, KeyListener {
 
     private static final long serialVersionUID = 1L;
@@ -40,7 +41,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public static final int SCALE = 4;
     private Thread thread;
     private boolean isRuning = true;
+    
+    private House lastEnteredHouse = null;
 
+    
     private BufferedImage image;
 
     public static List<Entity> entities;
@@ -72,16 +76,46 @@ public class Game extends Canvas implements Runnable, KeyListener {
     private int doorCooldown = 0;
     private final int DOOR_COOLDOWN_FRAMES = 20;
 
+    // ========== STATIC INITIALIZER ==========
+    // Garante que o spritesheet esteja criado antes que outras classes (Tile, Entity, etc.)
+    // acionem Game.spritesheet em seus blocos estáticos.
+    static {
+        try {
+            spritesheet = new Spritesheet("/spritesheet.png");
+            System.out.println("[Game] spritesheet criado no static init");
+        } catch (Exception e) {
+            // Se falhar aqui, tentamos novamente no construtor. Apenas log para debug.
+            spritesheet = null;
+            System.err.println("[Game] falha ao criar spritesheet no static init: " + e.getMessage());
+        }
+    }
+
     public Game() {
-    	Sound.MUSIC_BG.loop();
-    	Sound.MUSIC_BG.setVolume(-30.0f);
+    	// se ainda não tivermos spritesheet (por algum motivo), cria aqui
+    	if (spritesheet == null) {
+            try {
+                spritesheet = new Spritesheet("/spritesheet.png");
+                System.out.println("[Game] spritesheet criado no construtor");
+            } catch (Exception e) {
+                System.err.println("[Game] ERRO criando spritesheet no construtor: " + e.getMessage());
+                // continue; outras partes podem falhar, mas pelo menos mostramos o erro
+            }
+    	}
+
+    	// tenta ligar música - se Sound estiver ok
+    	try {
+	    	Sound.MUSIC_BG.loop();
+	    	Sound.MUSIC_BG.setVolume(-30.0f);
+    	} catch (Throwable t) {
+            // não falhar por causa do som
+            System.err.println("[Game] Sound init falhou: " + t.getMessage());
+    	}
+
         rand = new Random();
         addKeyListener(this);
         setPreferredSize(new Dimension(WIDTH * SCALE, HEIGHT * SCALE));
         initFrame();
 
-        // Inicializando recursos na ordem correta:
-        spritesheet = new Spritesheet("/spritesheet.png"); // primeiro spritesheet
         image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 
         ui = new UI(); // UI normalmente usa imagens do spritesheet (se usar)
@@ -92,23 +126,21 @@ public class Game extends Canvas implements Runnable, KeyListener {
         // Define um personagem padrão só para iniciar o jogo
         selectedCharacter = CharacterType.BOY;
 
-        // Player criado SEM sprite (ele decide sozinho)
+        // Player criado (hitbox e sprites carregados no construtor de Player)
         player = new Player(0, 0, 16, 16);
         entities.add(player);
 
         // inicia no mapa
         world = new World("/map_house.png", WorldType.HOUSE);
+        System.out.println("[Game] mundo inicializado: /map_house.png (HOUSE)");
 
         menu = new Menu();
 
-
-        
-        //carrega a imagem de game over
+        // carrega a imagem de game over (se existir)
         try {
 			go_girl = ImageIO.read(getClass().getResource("/game_over_girl.png"));
 			go_boy = ImageIO.read(getClass().getResource("/game_over_boy.png"));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
         
@@ -118,6 +150,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
         thread = new Thread(this);
         isRuning = true;
         thread.start();
+        System.out.println("[Game] thread iniciada");
     }
 
     public synchronized void stop() {
@@ -127,6 +160,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        System.out.println("[Game] thread parada");
     }
 
     public void initFrame() {
@@ -142,25 +176,43 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
     // entrar / sair — recria World (World ajusta spawn automaticamente)
     public void enterHouse() {
+        System.out.println("[Game] enterHouse()");
         changeWorld("/map_house.png", WorldType.HOUSE);
     }
 
     public void exitHouse() {
+        System.out.println("[Game] exitHouse()");
         changeWorld("/map.png", WorldType.MAIN);
     }
     
     public void enterCity() {
-    	changeWorld("/map_city.png", WorldType.CITY);
-    	Camera.x = 0;
-    	Camera.y = 0;
-
+        enterCity(null);
     }
+
+    public void enterCity(House fromHouse) {
+        System.out.println("[Game] enterCity()");
+        changeWorld("/map_city.png", WorldType.CITY);
+        if (fromHouse != null) {
+            // posiciona o jogador exatamente na porta da casa correspondente
+            player.setX(fromHouse.getDoorWorldX());
+            player.setY(fromHouse.getDoorWorldY());
+            Camera.x = Math.max(0, player.getX() - (WIDTH / 2));
+            Camera.y = Math.max(0, player.getY() - (HEIGHT / 2));
+            lastEnteredHouse = null;
+        } else {
+            Camera.x = 0;
+            Camera.y = 0;
+        }
+    }
+
     
     private void enterMain() {
-        world = new World("/map.png", WorldType.MAIN);
-        player.setX(100);
-        player.setY(100);
+        System.out.println("[Game] enterMain()");
+        changeWorld("/map.png", WorldType.MAIN);
+        // se quiser posicionar o jogador em um ponto fixo do MAIN você pode ajustar aqui,
+        // por enquanto changeWorld já tentará posicionar o player num "door" do novo mapa.
     }
+
 
 
     public static void main(String args[]) {
@@ -174,30 +226,40 @@ public class Game extends Canvas implements Runnable, KeyListener {
 				doorCooldown--;
 			}
 		
+	        // entrada/saída por porta (com cooldown)
+			// dentro de update(), no bloco que trata portas
+			if (doorCooldown == 0 && World.playerOnDoor()) {
+			    System.out.println("[Game] World.playerOnDoor() == true, world type = " + (world != null ? world.getType() : "null"));
+			    if (world != null) {
+			        Rectangle pm = Game.player.getMask();
+			        House houseAtDoor = World.getHouseAtPlayerDoor(pm); // novo helper (ver World.java abaixo)
 
-	        if (doorCooldown == 0 && World.playerOnDoor()) {
-	    	  if (world != null) {
-	
-	    		  if (World.playerOnDoor()) {
+			        if (world.getType() == WorldType.HOUSE) {
+			            // saindo de uma casa -> voltar para CITY (e posicionar na casa correspondente, se soubermos)
+			            if (lastEnteredHouse != null) {
+			                enterCity(lastEnteredHouse);
+			            } else {
+			                // fallback: apenas entra na city
+			                enterCity();
+			            }
+			        } else if (world.getType() == WorldType.CITY) {
+			            // se for porta de uma house -> entrar nela
+			            if (houseAtDoor != null) {
+			                lastEnteredHouse = houseAtDoor;
+			                enterHouse();
+			            } else {
+			                // provavelmente é a porta/estrada que leva ao MAIN
+			                enterMain();
+			            }
+			        } else if (world.getType() == WorldType.MAIN) {
+			            // voltar da MAIN para cidade
+			            enterCity();
+			        }
+			    }
+			    doorCooldown = DOOR_COOLDOWN_FRAMES;
+			    System.out.println("[Game] doorCooldown set to " + doorCooldown);
+			}
 
-	    			    if (world.getType() == WorldType.HOUSE) {
-
-	    			        enterCity();      // HOUSE → CITY
-
-	    			    } else if (world.getType() == WorldType.CITY) {
-
-	    			        enterMain();      // CITY → MAIN
-
-	    			    } else if (world.getType() == WorldType.MAIN) {
-
-	    			        enterCity();      // MAIN → CITY
-	    			    }
-	    			}
-
-
-	    	    }
-	            doorCooldown = DOOR_COOLDOWN_FRAMES; 
-	        }
 	
 	        for (int i = 0; i < entities.size(); i++) { 
 	            Entity e = entities.get(i);
@@ -284,6 +346,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
         // cria novo mundo (ele vai spawnar inimigos do mapa)
         world = new World(path, type);
+        System.out.println("[Game] changeWorld -> " + path + "  type=" + type);
 
         // --- posiciona o player em uma "porta" do novo mapa, se houver ---
         // Preferência: portas maptiles (World.doors). Se não tiver, tenta portas das casas.
@@ -294,6 +357,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
             // centraliza câmera aproximadamente no player
             Camera.x = Math.max(0, d.x - (WIDTH / 2));
             Camera.y = Math.max(0, d.y - (HEIGHT / 2));
+            System.out.println("[Game] player pos set to door tile: " + d);
         } else if (World.houses != null && !World.houses.isEmpty()) {
             House h = World.houses.get(0); // fallback: primeira house encontrada
             Rectangle da = h.getDoorArea();
@@ -302,11 +366,13 @@ public class Game extends Canvas implements Runnable, KeyListener {
                 player.setY(da.y);
                 Camera.x = Math.max(0, da.x - (WIDTH / 2));
                 Camera.y = Math.max(0, da.y - (HEIGHT / 2));
+                System.out.println("[Game] player pos set to house door: " + da);
             }
         } else {
             // fallback genérico: mantém player onde o World anterior deixou (ou 0,0)
             Camera.x = Math.max(0, player.getX() - (WIDTH / 2));
             Camera.y = Math.max(0, player.getY() - (HEIGHT / 2));
+            System.out.println("[Game] changeWorld fallback camera centering used");
         }
     }
 
@@ -348,14 +414,6 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public void keyPressed(KeyEvent e) {
         // tecla alternativa para entrar/ sair
         if ((e.getKeyCode() == KeyEvent.VK_E || e.getKeyCode() == KeyEvent.VK_ENTER)) {
-            if (World.playerOnDoor()) {
-                if (world != null && world.getType() == WorldType.MAIN) {
-                    enterHouse();
-                } else {
-                    exitHouse();
-                }
-                doorCooldown = DOOR_COOLDOWN_FRAMES;
-            }
         }
 
         if (e.getKeyCode() == KeyEvent.VK_RIGHT || e.getKeyCode() == KeyEvent.VK_D) {
@@ -422,6 +480,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
         
         if (e.getKeyCode() == KeyEvent.VK_F1) {
             House.showCollisionDebug = !House.showCollisionDebug;
+            System.out.println("[Game] House.showCollisionDebug = " + House.showCollisionDebug);
         }
     }
 }

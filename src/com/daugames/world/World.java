@@ -35,6 +35,7 @@ public class World {
 	public static List<ArvoreTile> arvores;
 	public static List<Rectangle> doors;
 
+	public static List<Well> pocos ;
 	// Referência estática para o mundo atual
 	public static World currentWorld;
 
@@ -57,6 +58,7 @@ public class World {
 			doors = new ArrayList<>();
 			houses = new ArrayList<>();
 			arvores = new ArrayList<>();
+			pocos = new ArrayList<>();
 
 			int[] pixels = new int[WIDTH * HEIGHT];
 			map.getRGB(0, 0, WIDTH, HEIGHT, pixels, 0, WIDTH);
@@ -128,8 +130,13 @@ public class World {
 
 						tiles[pos] = new FloorTile(wx, wy, Tile.TILE_FLOOR);
 						
+						// ELEMENTOS
 						if (pixel == 0xFF404040) {
 							tiles[pos] = new Tile(wx, wy, Tile.TILE_FLOOR_GRASS, false);
+						}else if (pixel == 0xFFDBB77A) {
+							tiles[pos] = new Tile(wx, wy, Tile.HOUSE_ENTRY1, false);
+						}else if (pixel == 0xFF3D3322) {
+							tiles[pos] = new Tile(wx, wy, Tile.HOUSE_ENTRY2, false);
 						}
 
 						// casas
@@ -140,13 +147,25 @@ public class World {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_FLOOR);
 						} else if (pixel == 0xFFFB9C38) {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY);
+							
+						   if (yy == HEIGHT - 1) {
+						        doors.add(new Rectangle(wx, wy, TILE_SIZE, TILE_SIZE));
+						   }
+						   
 						} else if (pixel == 0xFF211407) {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY_BO_TO);
 						} else if (pixel == 0xFF684018) {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY_RIGHT);
+							
+							if (yy == HEIGHT - 1) {
+								doors.add(new Rectangle(wx, wy, TILE_SIZE, TILE_SIZE));
+							}
+							
 						} else if (pixel == 0xFF3F2800) {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY_TOP_RIGHT);
-						} else if (pixel == 0xFFDD8F00) {
+						} else if (pixel == 0xFF915C00) {
+							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY_TOP_LEFT);
+						}else if (pixel == 0xFFDD8F00) {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY_UNDER_LEFT);
 						} else if (pixel == 0xFF633E00) {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY_UNDER_RIGHT);
@@ -156,7 +175,13 @@ public class World {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY_BOTTOM);
 						} else if (pixel == 0xFFF97C00) {
 							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_WAY_PREENCHED);
+						} 
+						
+						
+						if (pixel == 0xFFFF702E) {
+							tiles[pos] = new Tile(wx, wy, Tile.TILE_PLATE, true);
 						}
+
 						// arvores
 
 						if (pixel == 0xFF006605) {
@@ -221,7 +246,23 @@ public class World {
 							tiles[pos] = new Tile(wx, wy, Tile.FENCE_MIDDLE_LEFT, true);
 						}else if (pixel == 0xFF00FFFF) {
 							tiles[pos] = new Tile(wx, wy, Tile.FENCE_MIDDLE_RIGHT, true);
+						}else if (pixel == 0xFFAA2F98) {
+							tiles[pos] = new Tile(wx, wy, Tile.FENCE_BOTTOM_LEFT_2, true);
+						}else if (pixel == 0xFF350E2F) {
+							tiles[pos] = new Tile(wx, wy, Tile.FENCE_BOTTOM_RIGHT_2, true);
+						}else if (pixel == 0xFF204C1F) {
+							tiles[pos] = new Tile(wx, wy, Tile.FENCE_CLOSE_RIGHT, true);
+						}else if (pixel == 0xFF10260F) {
+							tiles[pos] = new Tile(wx, wy, Tile.FENCE_CLOSE_LEFT, true);
 						}
+						
+						//POÇO
+						if(pixel == 0xFF2D007C) {
+							tiles[pos] = new FloorTile(wx, wy, Tile.TILE_FLOOR);
+
+							// adiciona a árvore como objeto
+							pocos.add(new Well(wx, wy));
+						} 
 						
 						// itens
 						if (pixel == 0xFFFFB27F) {
@@ -285,6 +326,19 @@ public class World {
 	public WorldType getType() {
 		return this.type;
 	}
+	
+	// Retorna a House cuja porta o player está sobre, ou null se não houver
+	public static House getHouseAtPlayerDoor(Rectangle playerMask) {
+	    if (houses != null) {
+	        for (House h : houses) {
+	            if (h.playerIsOnDoor(playerMask)) {
+	                return h;
+	            }
+	        }
+	    }
+	    return null;
+	}
+
 
 	// Método isFree existente (compatibilidade)
 	public static boolean isFree(int xnext, int ynext) {
@@ -363,7 +417,11 @@ public class World {
 				return false;
 			}
 		}
-
+		for (Well e : pocos) {
+			if (e.getBounds().intersects(entityRect)) {
+				return false;
+			}
+		}
 		// 🔥 COLISÃO REAL DAS CASAS (pixel perfect)
 //        if (currentWorld != null && houses != null &&
 //            (currentWorld.getType() == WorldType.MAIN || currentWorld.getType() == WorldType.CITY)) {
@@ -411,6 +469,9 @@ public class World {
 			h.render(g);
 		}
 		for (ArvoreTile a : arvores) {
+			a.render(g);
+		}
+		for (Well a : pocos) {
 			a.render(g);
 		}
 	}
