@@ -300,20 +300,17 @@ public class World {
 						}
 
 						// âncora casa (exemplo)
+						// Onde cria as casas (aproximadamente linhas 304, 310, 314):
 						if (pixel == 0xFF21007F) {
-							House house = new House(wx, wy, "/house_tiles.png");
-							houses.add(house);
-							doorX = house.getDoorWorldX();
-							doorY = house.getDoorWorldY();
+						    House house = new House(wx, wy, "/house_tiles.png", "/house1_interior.png", 1);
+						    houses.add(house);
+						    doorX = house.getDoorWorldX();
+						    doorY = house.getDoorWorldY();
+						} else if (pixel == 0xFF8C0055) {
+						    houses.add(new House(wx, wy, "/house_type_2.png", "/house2_interior.png", 2));
+						} else if (pixel == 0xFF480055) {
+						    houses.add(new House(wx, wy, "/house_type_3.png", "/house3_interior.png", 3));
 						}
-						if (pixel == 0xFF8C0055) {
-							houses.add(new House(wx, wy, "/house_type_2.png"));
-
-						}
-						if (pixel == 0xFF480055) {
-							houses.add(new House(wx, wy, "/house_type_3.png"));
-						}
-
 					}
 				}
 			}

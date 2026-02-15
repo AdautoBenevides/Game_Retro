@@ -142,7 +142,7 @@ public class Menu {
         Game.player = new Player(0, 0, 16, 16);
         Game.entities.add(Game.player);
 
-        Game.world = new World("/map_house.png", WorldType.HOUSE);
+        Game.world = new World("/house1_interior.png", WorldType.HOUSE);
     }
 
 

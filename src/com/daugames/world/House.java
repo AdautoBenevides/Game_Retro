@@ -35,18 +35,27 @@ public class House {
     private int doorLocalTileY = -1;
 
     public static boolean showCollisionDebug = false;
+    
+    private final int houseId;
+    private final String interiorMapPath;
 
     // ---------------------------------------------------------
 
-    public House(int anchorX, int anchorY, String resourcePath) throws IOException {
-        this(anchorX, anchorY, resourcePath, -1, -1);
+    // Construtor COMPLETO (usado para casas com interior personalizado)
+    public House(int anchorX, int anchorY, String resourcePath, 
+                 String interiorPath, int houseId) throws IOException {
+        this(anchorX, anchorY, resourcePath, interiorPath, houseId, -1, -1);
     }
 
+    // Construtor com override de porta (se precisar)
     public House(int anchorX, int anchorY, String resourcePath,
+                 String interiorPath, int houseId,
                  int overrideDoorTileX, int overrideDoorTileY) throws IOException {
 
         this.anchorX = anchorX;
         this.anchorY = anchorY;
+        this.interiorMapPath = interiorPath;
+        this.houseId = houseId;
 
         sheet = ImageIO.read(getClass().getResource(resourcePath));
         if (sheet == null) {
@@ -61,6 +70,15 @@ public class House {
         }
 
         createCollisionFromBitmap();
+    }
+    
+    // Getters para os novos campos
+    public int getHouseId() {
+        return houseId;
+    }
+    
+    public String getInteriorMapPath() {
+        return interiorMapPath;
     }
 
     // ---------------------------------------------------------

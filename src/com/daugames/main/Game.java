@@ -61,7 +61,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
     public UI ui;
     
-    public static GameState state = GameState.IN_GAME;
+    public static GameState state = GameState.MENU;
     
     private BufferedImage go_girl;
     private BufferedImage go_boy;
@@ -75,6 +75,8 @@ public class Game extends Canvas implements Runnable, KeyListener {
     // cooldown para evitar spam de entrada/saida
     private int doorCooldown = 0;
     private final int DOOR_COOLDOWN_FRAMES = 20;
+    
+
 
     // ========== STATIC INITIALIZER ==========
     // Garante que o spritesheet esteja criado antes que outras classes (Tile, Entity, etc.)
@@ -131,7 +133,12 @@ public class Game extends Canvas implements Runnable, KeyListener {
         entities.add(player);
 
         // inicia no mapa
-        world = new World("/map_house.png", WorldType.HOUSE);
+        world = new World("/house1_interior.png", WorldType.HOUSE);
+       
+
+        
+        // ===== FIM DA SOLUÇÃO =====
+        
         System.out.println("[Game] mundo inicializado: /map_house.png (HOUSE)");
 
         menu = new Menu();
@@ -175,9 +182,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
 
     // entrar / sair — recria World (World ajusta spawn automaticamente)
-    public void enterHouse() {
-        System.out.println("[Game] enterHouse()");
-        changeWorld("/map_house.png", WorldType.HOUSE);
+    public void enterHouse(House house) {
+        System.out.println("[Game] enterHouse() id=" + house.getHouseId());
+        lastEnteredHouse = house;
+        changeWorld(house.getInteriorMapPath(), WorldType.HOUSE);
     }
 
     public void exitHouse() {
@@ -197,12 +205,21 @@ public class Game extends Canvas implements Runnable, KeyListener {
             player.setX(fromHouse.getDoorWorldX());
             player.setY(fromHouse.getDoorWorldY());
             Camera.x = Math.max(0, player.getX() - (WIDTH / 2));
-            Camera.y = Math.max(0, player.getY() - (HEIGHT / 2));
+            Camera.y = Math.max(0, player.getY() - (HEIGHT / 2) );
             lastEnteredHouse = null;
         } else {
-            Camera.x = 0;
-            Camera.y = 0;
+            // usa a PRIMEIRA casa criada no mapa como padrão
+            if (World.houses != null && !World.houses.isEmpty()) {
+                House defaultHouse = World.houses.get(0);
+
+                player.setX(defaultHouse.getDoorWorldX());
+                player.setY(defaultHouse.getDoorWorldY());
+
+                Camera.x = Math.max(0, player.getX() - (WIDTH / 2));
+                Camera.y = Math.max(0, player.getY() - (HEIGHT / 2));
+            }
         }
+
     }
 
     
@@ -222,6 +239,8 @@ public class Game extends Canvas implements Runnable, KeyListener {
     
     public void update() {
     	if (state == GameState.IN_GAME) {
+    		
+    		
 			if (doorCooldown > 0) {
 				doorCooldown--;
 			}
@@ -246,7 +265,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 			            // se for porta de uma house -> entrar nela
 			            if (houseAtDoor != null) {
 			                lastEnteredHouse = houseAtDoor;
-			                enterHouse();
+			                enterHouse(houseAtDoor);  // <-- PASSA A CASA ESPECÍFICA
 			            } else {
 			                // provavelmente é a porta/estrada que leva ao MAIN
 			                enterMain();
@@ -340,6 +359,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
 
     public void changeWorld(String path, WorldType type) {
+    	
 
         // remove tudo EXCETO o player
         entities.removeIf(e -> !(e instanceof Player));
@@ -348,8 +368,6 @@ public class Game extends Canvas implements Runnable, KeyListener {
         world = new World(path, type);
         System.out.println("[Game] changeWorld -> " + path + "  type=" + type);
 
-        // --- posiciona o player em uma "porta" do novo mapa, se houver ---
-        // Preferência: portas maptiles (World.doors). Se não tiver, tenta portas das casas.
         if (World.doors != null && !World.doors.isEmpty()) {
             Rectangle d = World.doors.get(0); // por enquanto usa a primeira porta do mapa
             player.setX(d.x);
